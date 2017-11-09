@@ -12,15 +12,17 @@ import collections
 
 
 def get_benches(folder):
+    print('Collecting benchmarks ...')
     benches = collections.defaultdict(list)
-    for file in [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]:
+    for file in sorted([f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]):
         with open(os.path.join(folder, file), newline='') as csvfile:
+            print(' ... found bench file {}'.format(file))
             rows = [row for row in csv.reader(csvfile, delimiter=',')]
             labels, rows = rows[0], rows[1:]
             for row in rows:
                 bench_name = row[0]
                 data_frame = pd.DataFrame(data=row[1:], index=labels[1:])
-                times = data_frame.loc[['min', 'max', 'average']]
+                times = data_frame.loc[['min(ns)', 'max(ns)', 'average(ns)']]
                 cycles = data_frame.loc[['min_cycles', 'max_cycles', 'average_cycles']]
                 files = [[file]] * len(cycles)
                 data_frame = pd.DataFrame(data=np.concatenate([times, cycles, files], axis=1),
@@ -32,15 +34,22 @@ def get_benches(folder):
 
 
 def plot_benches(benches, out_folder):
+    print('Creating plots for benches ...')
     for bench_name in benches:
         bench = benches[bench_name]
-        sn.boxplot(x=bench['files'], y=bench['times'].apply(pd.to_numeric))
+        #target = 'cycles'
+        target = 'times'
+        sn.boxplot(
+            x=bench['files'],
+            y=bench[target].apply(pd.to_numeric),
+        )
         pl.xlabel('Instance')
-        pl.ylabel('Time')
+        pl.ylabel(target)
         pl.ylim(ymin=0)
         pl.title(bench_name)
+        print(' ... {}'.format(bench_name))
         pl.savefig(os.path.join(out_folder, bench_name + '.png'))
-        pl.show()
+        #pl.show()
         pl.close()
 
 
